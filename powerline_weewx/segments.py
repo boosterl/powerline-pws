@@ -70,8 +70,6 @@ parameter_unit_map = {
     "rain_hour": "rain",
 }
 
-non_numeric_parameters = ["windDir_compass"]
-
 
 class WeeWXSegment(KwThreadedSegment):
     interval = 150
@@ -92,7 +90,7 @@ class WeeWXSegment(KwThreadedSegment):
         measurements = dict()
         try:
             for parameter, index in cumulus_fields.items():
-                if parameter not in non_numeric_parameters:
+                if parameters[index].isnumeric():
                     measurements[parameter] = float(parameters[index])
                 else:
                     measurements[parameter] = parameters[index]
