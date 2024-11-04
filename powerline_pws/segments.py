@@ -129,12 +129,13 @@ class PWSSegment(KwThreadedSegment):
         if not parameters:
             parameters = ["outTemp"]
         groups = list()
-        for parameter in parameters[0:-1]:
+        for parameter in parameters:
+            last = parameter == parameters[-1]
             if parameter == "UV":
                 gradient_level = measurements.get(parameter, 0) * (100/11)
                 groups.append(
                     {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
                         "highlight_groups": ["pws_uv_gradient", "pws"],
                         "divider_highlight_group": "background:divider",
                         "gradient_level": gradient_level,
@@ -144,7 +145,7 @@ class PWSSegment(KwThreadedSegment):
                 gradient_level = (float(measurements.get(parameter, 0)) - (-30)) * 100.0 / (40 - (-30))
                 groups.append(
                     {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
                         "highlight_groups": ["pws_uv_gradient", "pws"],
                         "divider_highlight_group": "background:divider",
                         "gradient_level": gradient_level,
@@ -153,39 +154,11 @@ class PWSSegment(KwThreadedSegment):
             else:
                 groups.append(
                     {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
                         "highlight_groups": ["pws"],
                         "divider_highlight_group": "background:divider",
                     }
                 )
-        if parameters[-1] == "UV":
-            gradient_level = measurements.get(parameters[-1], 0) * (100/11)
-            groups.append(
-                {
-                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
-                    "highlight_groups": ["pws_uv_gradient", "pws"],
-                    "divider_highlight_group": "background:divider",
-                    "gradient_level": gradient_level,
-                }
-            )
-        elif parameters[-1] == "outTemp":
-            gradient_level = (float(measurements.get(parameters[-1], 0)) - (-30)) * 100.0 / (40 - (-30))
-            groups.append(
-                {
-                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
-                    "highlight_groups": ["pws_uv_gradient", "pws"],
-                    "divider_highlight_group": "background:divider",
-                    "gradient_level": gradient_level,
-                }
-            )
-        else:
-            groups.append(
-                {
-                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
-                    "highlight_groups": ["pws"],
-                    "divider_highlight_group": "background:divider",
-                }
-            )
         return groups
 
 
