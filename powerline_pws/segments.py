@@ -6,7 +6,7 @@ from powerline.lib.url import urllib_read, urllib_urlencode
 from powerline.lib.threaded import KwThreadedSegment
 from powerline.segments import with_docstring
 
-_WeeWXKey = namedtuple("Key", "weewx_url")
+_PWSKey = namedtuple("Key", "pws_url")
 
 cumulus_fields = {
     "outTemp": 2,
@@ -71,17 +71,17 @@ parameter_unit_map = {
 }
 
 
-class WeeWXSegment(KwThreadedSegment):
+class PWSSegment(KwThreadedSegment):
     interval = 150
 
     @staticmethod
-    def key(weewx_url="", **kwargs):
-        return _WeeWXKey(weewx_url)
+    def key(pws_url="", **kwargs):
+        return _PWSKey(pws_url)
 
     def compute_state(self, key):
-        if not key.weewx_url:
+        if not key.pws_url:
             return None
-        url = key.weewx_url
+        url = key.pws_url
         raw_response = urllib_read(url)
         if not raw_response:
             self.error("Failed to get response")
@@ -96,8 +96,9 @@ class WeeWXSegment(KwThreadedSegment):
                     measurements[parameter] = parameters[index]
         except (KeyError, ValueError):
             self.exception(
-                "WeeWX returned malformed or unexpected response: {0}",
+                "PWS returned malformed or unexpected response: {0} {1}",
                 repr(raw_response),
+                parameter,
             )
             return None
         return measurements
@@ -129,28 +130,74 @@ class WeeWXSegment(KwThreadedSegment):
             parameters = ["outTemp"]
         groups = list()
         for parameter in parameters[0:-1]:
+            if parameter == "UV":
+                gradient_level = measurements.get(parameter, 0) * (100/11)
+                groups.append(
+                    {
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "highlight_groups": ["pws_uv_gradient", "pws"],
+                        "divider_highlight_group": "background:divider",
+                        "gradient_level": gradient_level,
+                    }
+                )
+            elif parameter == "outTemp":
+                gradient_level = (float(measurements.get(parameter, 0)) - (-30)) * 100.0 / (40 - (-30))
+                groups.append(
+                    {
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "highlight_groups": ["pws_uv_gradient", "pws"],
+                        "divider_highlight_group": "background:divider",
+                        "gradient_level": gradient_level,
+                    }
+                )
+            else:
+                groups.append(
+                    {
+                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
+                        "highlight_groups": ["pws"],
+                        "divider_highlight_group": "background:divider",
+                    }
+                )
+        if parameters[-1] == "UV":
+            gradient_level = measurements.get(parameters[-1], 0) * (100/11)
             groups.append(
                 {
-                    "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')} ",
-                    "highlight_groups": ["weather"],
+                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
+                    "highlight_groups": ["pws_uv_gradient", "pws"],
+                    "divider_highlight_group": "background:divider",
+                    "gradient_level": gradient_level,
                 }
             )
-        groups.append(
-            {
-                "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
-                "highlight_groups": ["weather"],
-            }
-        )
+        elif parameters[-1] == "outTemp":
+            gradient_level = (float(measurements.get(parameters[-1], 0)) - (-30)) * 100.0 / (40 - (-30))
+            groups.append(
+                {
+                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
+                    "highlight_groups": ["pws_uv_gradient", "pws"],
+                    "divider_highlight_group": "background:divider",
+                    "gradient_level": gradient_level,
+                }
+            )
+        else:
+            groups.append(
+                {
+                    "contents": f"{measurements.get(parameters[-1], '')}{unit_map.get(parameter_unit_map.get(parameters[-1]), '')}",
+                    "highlight_groups": ["pws"],
+                    "divider_highlight_group": "background:divider",
+                }
+            )
         return groups
 
 
-weewx = with_docstring(
-    WeeWXSegment(),
-    """Return weather from WeeWX.
+pws = with_docstring(
+    PWSSegment(),
+    """Return weather from PWS.
 
-:param str weewx_url:
-    url to the WeeWX instance
+:param str pws_url:
+    url to the PWS instance
 
-Highlight groups used: ``weather_conditions`` or ``weather``, ``weather_temp_gradient`` (gradient) or ``weather``.
+Divider highlight group used: ``background:divider``.
+
+Highlight groups used: ``pws``, ``pws_uv_gradient`` (gradient) or ``pws``.
 """,
 )
