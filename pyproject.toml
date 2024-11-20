@@ -1,0 +1,29 @@
+# pyproject.toml
+
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "powerline-pws"
+description = "A Powerline segment for showing the PWS station data" 
+version = "0.1.0"
+readme = "README.md"
+authors = [{ name = "Bram Oosterlynck", email = "bram.oosterlynck@gmail.com" }]
+license = { file = "LICENSE" }
+classifiers  = [
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+keywords = ["powerline weather-station weewx pws personal-weather-station powerline-segment"]
+
+[project.urls]
+Homepage = "https://github.com/boosterl/powerline-pws"
+Repository = "https://github.com/boosterl/powerline-pws.git"
+Issues = "https://github.com/boosterl/powerline-pws"
