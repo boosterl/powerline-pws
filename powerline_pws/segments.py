@@ -146,7 +146,7 @@ class PWSSegment(KwThreadedSegment):
                 groups.append(
                     {
                         "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
-                        "highlight_groups": ["pws_uv_gradient", "pws"],
+                        "highlight_groups": ["pws_temp_gradient", "pws"],
                         "divider_highlight_group": "background:divider",
                         "gradient_level": gradient_level,
                     }
