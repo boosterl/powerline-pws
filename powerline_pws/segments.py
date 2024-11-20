@@ -108,6 +108,8 @@ class PWSSegment(KwThreadedSegment):
         measurements,
         parameters=None,
         temp_unit="°C",
+        temp_coldest=-30,
+        temp_hottest=40,
         pressure_unit="mbar",
         speed_unit="km/h",
         rain_unit="mm",
@@ -132,7 +134,10 @@ class PWSSegment(KwThreadedSegment):
         for parameter in parameters:
             last = parameter == parameters[-1]
             if parameter == "UV":
-                gradient_level = measurements.get(parameter, 0) * (100/11)
+                if measurements.get(parameter, 0) >= 11:
+                    gradient_level = 100
+                else:
+                    gradient_level = measurements.get(parameter, 0) * (100/11)
                 groups.append(
                     {
                         "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
@@ -142,7 +147,13 @@ class PWSSegment(KwThreadedSegment):
                     }
                 )
             elif parameter == "outTemp":
-                gradient_level = (float(measurements.get(parameter, 0)) - (-30)) * 100.0 / (40 - (-30))
+                measured_temp = float(measurements.get(parameter, 0))
+                if measured_temp <= temp_coldest:
+                    gradient_level = 0
+                elif measured_temp >= temp_hottest:
+                    gradient_level = 100
+                else:
+                    gradient_level = (measured_temp - temp_coldest) * 100.0 / (temp_hottest - temp_coldest)
                 groups.append(
                     {
                         "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
