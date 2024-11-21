@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "powerline-pws"
 description = "A Powerline segment for showing the PWS station data" 
-version = "0.1.0"
+version = "1.0.0"
 readme = "README.md"
 authors = [{ name = "Bram Oosterlynck", email = "bram.oosterlynck@gmail.com" }]
 license = { file = "LICENSE" }
