@@ -5,6 +5,17 @@ weather data from your PWS (Personal Weather Station).
 
 ![](screenshot.png)
 
+# Installation
+
+## Using pip
+
+```
+pip install powerline-pws
+```
+_Note: since [PEP 668](https://peps.python.org/pep-0668/) installing pip-packages
+system-wide isn't supported by default anymore. This behaviour can be
+overwritten using the `--break-system-packages`. Do this at your own risk._
+
 # Configuration
 
 The PWS segment is currently only compatible with the [Cumulus Realtime Format](https://www.cumuluswiki.org/a/Realtime.txt)
