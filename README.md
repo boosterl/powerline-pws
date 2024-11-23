@@ -28,7 +28,7 @@ After this you can activate the segment by adding it to your segment
 configuration, for example in `.config/powerline/themes/tmux/default.json`:
 ```
 {
-    "function": "powerline.segments.common.weewx.pws",
+    "function": "powerline_pws.pws",
     "args": {
       "pws_url": "<URL_TO_YOUR_PWS>"
     }
@@ -40,7 +40,7 @@ outdoor temperature. You can define which measurements to show using the
 `parameters`-parameter:
 ```
 {
-    "function": "powerline.segments.common.weewx.pws",
+    "function": "powerline_pws.pws",
     "args": {
       "pws_url": "<URL_TO_YOUR_PWS>",
       "parameters": ["dayRain", "outTemp", "barometer", "outHumidity"]
