@@ -90,10 +90,7 @@ class PWSSegment(KwThreadedSegment):
         measurements = dict()
         try:
             for parameter, index in cumulus_fields.items():
-                if parameters[index].isnumeric():
-                    measurements[parameter] = float(parameters[index])
-                else:
-                    measurements[parameter] = parameters[index]
+                measurements[parameter] = self.map_measurement(parameters[index])
         except (KeyError, ValueError):
             self.exception(
                 "PWS returned malformed or unexpected response: {0} {1}",
@@ -102,6 +99,13 @@ class PWSSegment(KwThreadedSegment):
             )
             return None
         return measurements
+
+    @staticmethod
+    def map_measurement(measurement):
+        try:
+            return float(measurement)
+        except ValueError:
+            return measurement
 
     @staticmethod
     def render_one(
