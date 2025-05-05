@@ -58,3 +58,25 @@ outdoor temperature. You can define which measurements to show using the
     }
 }
 ```
+
+In this example, the segment is configured two times to show different data from
+different weather stations. A label is added to every station to be able to
+distinguish the data:
+```
+{
+	"function": "powerline_pws.pws",
+	"args": {
+	  "pws_url": "<URL_TO_PWS_1>",
+	  "label": "🏝️",
+	  "parameters": ["outTemp", "UV", "outHumidity"]
+	}
+},
+{
+	"function": "powerline_pws.pws",
+	"args": {
+	  "pws_url": "<URL_TO_PWS_2>",
+	  "label": "🏠",
+	  "parameters": ["inTemp", "outTemp", "barometer", "outHumidity"]
+	}
+}
+```
