@@ -41,6 +41,18 @@ cumulus_fields = {
     "rain_hour": 47,
 }
 
+gradient_calculators = {
+    "inTemp": PWSSegment.temperature_gradient,
+    "outTemp": PWSSegment.temperature_gradient,
+    "UV": PWSSegment.ultraviolet_gradient,
+}
+
+gradient_map = {
+    "inTemp": "pws_temp_gradient",
+    "outTemp": "pws_temp_gradient",
+    "UV": "pws_uv_gradient",
+}
+
 parameter_unit_map = {
     "outTemp": "temperature",
     "outHumidity": "relative",
@@ -146,44 +158,36 @@ class PWSSegment(KwThreadedSegment):
             )
         for parameter in parameters:
             last = parameter == parameters[-1]
-            if parameter == "UV":
-                if measurements.get(parameter, 0) >= 11:
-                    gradient_level = 100
-                else:
-                    gradient_level = measurements.get(parameter, 0) * (100/11)
-                groups.append(
-                    {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
-                        "highlight_groups": ["pws_uv_gradient", "pws"],
-                        "divider_highlight_group": "background:divider",
-                        "gradient_level": gradient_level,
-                    }
+            group = {
+                "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
+                "highlight_groups": [gradient_map.get(parameter), "pws"],
+                "divider_highlight_group": "background:divider",
+            }
+            gradient_calculator = gradient_calculators.get(parameter)
+            if gradient_calculator:
+                group["gradient_level"] = gradient_calculator(
+                    measurements.get(parameter, 0),
+                    temp_coldest=temp_coldest,
+                    temp_hottest=temp_hottest,
                 )
-            elif parameter == "outTemp":
-                measured_temp = float(measurements.get(parameter, 0))
-                if measured_temp <= temp_coldest:
-                    gradient_level = 0
-                elif measured_temp >= temp_hottest:
-                    gradient_level = 100
-                else:
-                    gradient_level = (measured_temp - temp_coldest) * 100.0 / (temp_hottest - temp_coldest)
-                groups.append(
-                    {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
-                        "highlight_groups": ["pws_temp_gradient", "pws"],
-                        "divider_highlight_group": "background:divider",
-                        "gradient_level": gradient_level,
-                    }
-                )
-            else:
-                groups.append(
-                    {
-                        "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
-                        "highlight_groups": ["pws"],
-                        "divider_highlight_group": "background:divider",
-                    }
-                )
+            groups.append(group)
         return groups
+
+    @staticmethod
+    def temperature_gradient(temperature, **kwargs):
+        temp_coldest = kwargs.get("temp_coldest", -30)
+        temp_hottest = kwargs.get("temp_hottest", 40)
+        if temperature <= temp_coldest:
+            return 0
+        if temperature >= temp_hottest:
+            return 100
+        return (temperature - temp_coldest) * 100.0 / (temp_hottest - temp_coldest)
+
+    @staticmethod
+    def ultraviolet_gradient(index, **kwargs):
+        if index >= 11:
+            return 100
+        return index * (100 / 11)
 
 
 pws = with_docstring(
