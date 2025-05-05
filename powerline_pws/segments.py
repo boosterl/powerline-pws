@@ -107,6 +107,7 @@ class PWSSegment(KwThreadedSegment):
     def render_one(
         measurements,
         parameters=None,
+        label=None,
         temp_unit="°C",
         temp_coldest=-30,
         temp_hottest=40,
@@ -131,6 +132,14 @@ class PWSSegment(KwThreadedSegment):
         if not parameters:
             parameters = ["outTemp"]
         groups = list()
+        if label:
+            groups.append(
+                {
+                    "contents": f"{label} ",
+                    "highlight_groups": ["pws"],
+                    "divider_highlight_group": "background:divider",
+                }
+            )
         for parameter in parameters:
             last = parameter == parameters[-1]
             if parameter == "UV":
@@ -179,6 +188,9 @@ pws = with_docstring(
 
 :param str pws_url:
     url to the PWS instance
+
+:param str label:
+    Optional label to display next to the segment
 
 Divider highlight group used: ``background:divider``.
 
