@@ -41,18 +41,6 @@ cumulus_fields = {
     "rain_hour": 47,
 }
 
-gradient_calculators = {
-    "inTemp": PWSSegment.temperature_gradient,
-    "outTemp": PWSSegment.temperature_gradient,
-    "UV": PWSSegment.ultraviolet_gradient,
-}
-
-gradient_map = {
-    "inTemp": "pws_temp_gradient",
-    "outTemp": "pws_temp_gradient",
-    "UV": "pws_uv_gradient",
-}
-
 parameter_unit_map = {
     "outTemp": "temperature",
     "outHumidity": "relative",
@@ -189,6 +177,18 @@ class PWSSegment(KwThreadedSegment):
             return 100
         return index * (100 / 11)
 
+
+gradient_calculators = {
+    "inTemp": PWSSegment.temperature_gradient,
+    "outTemp": PWSSegment.temperature_gradient,
+    "UV": PWSSegment.ultraviolet_gradient,
+}
+
+gradient_map = {
+    "inTemp": "pws_temp_gradient",
+    "outTemp": "pws_temp_gradient",
+    "UV": "pws_uv_gradient",
+}
 
 pws = with_docstring(
     PWSSegment(),
