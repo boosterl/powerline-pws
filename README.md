@@ -16,6 +16,14 @@ _Note: since [PEP 668](https://peps.python.org/pep-0668/) installing pip-package
 system-wide isn't supported by default anymore. This behaviour can be
 overwritten using the `--break-system-packages`. Do this at your own risk._
 
+## AUR
+
+A PKGBUILD has been created for this package, available on the [AUR](https://aur.archlinux.org/packages/python-powerline-pws).
+
+```
+paru -S python-powerline-pws
+```
+
 # Configuration
 
 The PWS segment is currently only compatible with the [Cumulus Realtime Format](https://www.cumuluswiki.org/a/Realtime.txt)
