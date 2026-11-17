@@ -1,207 +1,133 @@
-from __future__ import unicode_literals, division, absolute_import, print_function
-
+import os
 from collections import namedtuple
+from urllib.parse import unquote, urlparse
 
-from powerline.lib.url import urllib_read, urllib_urlencode
 from powerline.lib.threaded import KwThreadedSegment
+from powerline.lib.url import urllib_read
 from powerline.segments import with_docstring
 
-_PWSKey = namedtuple("Key", "pws_url")
+from .parsers import DEFAULT_DATE_FORMAT, PARSERS, ParseError
+from .render import build_segments
 
-cumulus_fields = {
-    "outTemp": 2,
-    "outHumidity": 3,
-    "dewpoint": 4,
-    "windSpeed_avg": 5,
-    "windSpeed": 6,
-    "rainRate": 8,
-    "dayRain": 9,
-    "barometer": 10,
-    "windDir_compass": 11,
-    "pressure_trend": 18,
-    "rain_month": 19,
-    "rain_year": 20,
-    "rain_yesterday": 21,
-    "inTemp": 22,
-    "inHumidity": 23,
-    "windchill": 24,
-    "temperature_trend": 25,
-    "outTemp_max": 26,
-    "outTemp_min": 28,
-    "windSpeed_max": 30,
-    "windGust_max": 32,
-    "pressure_max": 34,
-    "pressure_min": 36,
-    "10_min_high_gust": 40,
-    "heatindex": 41,
-    "humidex": 42,
-    "UV": 43,
-    "radiation": 45,
-    "10min_avg_wind_bearing": 46,
-    "rain_hour": 47,
-}
+_PWSKey = namedtuple("Key", "pws_url station_type date_format")
 
-parameter_unit_map = {
-    "outTemp": "temperature",
-    "outHumidity": "relative",
-    "dewpoint": "temperature",
-    "windSpeed_avg": "speed",
-    "windSpeed": "speed",
-    "rainRate": "rain_rate",
-    "dayRain": "rain",
-    "barometer": "pressure",
-    "rain_month": "rain",
-    "rain_year": "rain",
-    "rain_yesterday": "rain",
-    "inTemp": "temperature",
-    "inHumidity": "relative",
-    "windchill": "temperature",
-    "temperature_trend": "temperature",
-    "outTemp_max": "temperature",
-    "outTemp_min": "temperature",
-    "windSpeed_max": "speed",
-    "windGust_max": "speed",
-    "pressure_max": "pressure",
-    "pressure_min": "pressure",
-    "10_min_high_gust": "speed",
-    "heatindex": "temperature",
-    "humidex": "temperature",
-    "radiation": "radiation",
-    "rain_hour": "rain",
+# Legacy per-category unit label arguments.
+_UNIT_ARGS = {
+    "temperature": "temp_unit",
+    "pressure": "pressure_unit",
+    "speed": "speed_unit",
+    "rain": "rain_unit",
+    "rain_rate": "rain_rate_unit",
+    "radiation": "radiation_unit",
 }
+_RENDER_ARGS = (
+    "parameters", "label", "format", "unit_system", "source_unit_system",
+    "show_units", "icons", "gradients", "temp_coldest", "temp_hottest",
+    "stale_after", "hide_stale",
+)  # fmt: skip
+
+
+def read_source(url):
+    """Read the station data from an http(s) url, ``file://`` url or local path."""
+    parsed = urlparse(url)
+    if parsed.scheme in ("http", "https"):
+        return urllib_read(url)
+    if parsed.scheme == "file":
+        path = unquote(parsed.path)
+    elif parsed.scheme == "":
+        path = os.path.expanduser(url)
+    else:
+        raise ValueError(f"unsupported url scheme: {parsed.scheme!r}")
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
 
 
 class PWSSegment(KwThreadedSegment):
+    # Can be overridden per segment with the ``interval`` argument.
     interval = 150
 
     @staticmethod
-    def key(pws_url="", **kwargs):
-        return _PWSKey(pws_url)
+    def key(pws_url="", station_type="cumulus", date_format=DEFAULT_DATE_FORMAT, **kwargs):
+        return _PWSKey(pws_url, station_type, date_format)
 
     def compute_state(self, key):
         if not key.pws_url:
             return None
-        url = key.pws_url
-        raw_response = urllib_read(url)
+        parser = PARSERS.get(key.station_type)
+        if parser is None:
+            self.error("Unknown station_type {0!r}, expected one of {1}", key.station_type, sorted(PARSERS))
+            return None
+        try:
+            raw_response = read_source(key.pws_url)
+        except (OSError, ValueError) as e:
+            self.error("Failed to read {0}: {1}", key.pws_url, e)
+            return None
         if not raw_response:
             self.error("Failed to get response")
             return None
-        parameters = raw_response.split()
-        measurements = dict()
         try:
-            for parameter, index in cumulus_fields.items():
-                measurements[parameter] = self.map_measurement(parameters[index])
-        except (KeyError, ValueError):
-            self.exception(
-                "PWS returned malformed or unexpected response: {0} {1}",
-                repr(raw_response),
-                parameter,
-            )
+            return parser(raw_response, key.date_format)
+        except ParseError as e:
+            self.error("PWS returned malformed or unexpected response ({0}): {1}", e, repr(raw_response))
             return None
-        return measurements
 
-    @staticmethod
-    def map_measurement(measurement):
+    def render_one(self, state, **kwargs):
+        options = {name: kwargs[name] for name in _RENDER_ARGS if name in kwargs}
+        options["unit_overrides"] = {category: kwargs.get(arg) for category, arg in _UNIT_ARGS.items()}
         try:
-            return float(measurement)
-        except ValueError:
-            return measurement
-
-    @staticmethod
-    def render_one(
-        measurements,
-        parameters=None,
-        label=None,
-        temp_unit="°C",
-        temp_coldest=-30,
-        temp_hottest=40,
-        pressure_unit="mbar",
-        speed_unit="km/h",
-        rain_unit="mm",
-        rain_rate_unit="mm/h",
-        radiation_unit="W/m²",
-        **kwargs,
-    ):
-        unit_map = {
-            "pressure": pressure_unit,
-            "radiation": radiation_unit,
-            "rain": rain_unit,
-            "rain_rate": rain_rate_unit,
-            "relative": "%",
-            "speed": speed_unit,
-            "temperature": temp_unit,
-        }
-        if not measurements:
+            return build_segments(state, **options)
+        except (ValueError, TypeError, KeyError) as e:
+            self.error("Invalid PWS segment configuration: {0}", e)
             return None
-        if not parameters:
-            parameters = ["outTemp"]
-        groups = list()
-        if label:
-            groups.append(
-                {
-                    "contents": f"{label} ",
-                    "highlight_groups": ["pws"],
-                    "divider_highlight_group": "background:divider",
-                }
-            )
-        for parameter in parameters:
-            last = parameter == parameters[-1]
-            group = {
-                "contents": f"{measurements.get(parameter, '')}{unit_map.get(parameter_unit_map.get(parameter), '')}{'' if last else ' '}",
-                "highlight_groups": [gradient_map.get(parameter), "pws"],
-                "divider_highlight_group": "background:divider",
-            }
-            gradient_calculator = gradient_calculators.get(parameter)
-            if gradient_calculator:
-                group["gradient_level"] = gradient_calculator(
-                    measurements.get(parameter, 0),
-                    temp_coldest=temp_coldest,
-                    temp_hottest=temp_hottest,
-                )
-            groups.append(group)
-        return groups
 
-    @staticmethod
-    def temperature_gradient(temperature, **kwargs):
-        temp_coldest = kwargs.get("temp_coldest", -30)
-        temp_hottest = kwargs.get("temp_hottest", 40)
-        if temperature <= temp_coldest:
-            return 0
-        if temperature >= temp_hottest:
-            return 100
-        return (temperature - temp_coldest) * 100.0 / (temp_hottest - temp_coldest)
-
-    @staticmethod
-    def ultraviolet_gradient(index, **kwargs):
-        if index >= 11:
-            return 100
-        return index * (100 / 11)
-
-
-gradient_calculators = {
-    "inTemp": PWSSegment.temperature_gradient,
-    "outTemp": PWSSegment.temperature_gradient,
-    "UV": PWSSegment.ultraviolet_gradient,
-}
-
-gradient_map = {
-    "inTemp": "pws_temp_gradient",
-    "outTemp": "pws_temp_gradient",
-    "UV": "pws_uv_gradient",
-}
 
 pws = with_docstring(
     PWSSegment(),
-    """Return weather from PWS.
+    """Return weather from a PWS (personal weather station).
 
 :param str pws_url:
-    url to the PWS instance
-
+    http(s) url, ``file://`` url or local path of the station data
+:param str station_type:
+    Format of the station data. Currently only ``cumulus`` (default).
+:param list parameters:
+    Measurements to show, e.g. ``["outTemp", "UV"]``. Default ``["outTemp"]``.
+:param str format:
+    Format string such as ``"{outTemp} {outHumidity}"``. Overrides ``parameters``.
+    A format spec can be used for numbers, e.g. ``"{outTemp:.0f}"``.
 :param str label:
-    Optional label to display next to the segment
+    Optional label to display before the measurements
+:param str unit_system:
+    ``metric`` (default) or ``imperial``
+:param str source_unit_system:
+    Unit system the station reports in, ``metric`` (default) or ``imperial``
+:param bool show_units:
+    Append units to values (default ``true``)
+:param dict icons:
+    Symbol to put before a measurement, e.g. ``{"outTemp": "T "}``
+:param dict gradients:
+    Per measurement ``[min, max]`` (metric units) or
+    ``{"min": .., "max": .., "group": ..}``; ``null`` disables a gradient
+:param int temp_coldest:
+    Temperature (°C) at the cold end of the temperature gradient (default -30)
+:param int temp_hottest:
+    Temperature (°C) at the hot end of the temperature gradient (default 40)
+:param int stale_after:
+    Seconds after which the station data is considered stale (default 900,
+    ``0`` disables). The station timestamp is read as local time.
+:param bool hide_stale:
+    Hide the segment instead of highlighting it when data is stale
+:param str date_format:
+    ``strptime`` date format of the station date (default ``%d/%m/%y``)
+:param int interval:
+    Seconds between updates (default 150)
+:param str temp_unit:
+    Override the temperature unit label (also ``pressure_unit``, ``speed_unit``,
+    ``rain_unit``, ``rain_rate_unit`` and ``radiation_unit``)
 
 Divider highlight group used: ``background:divider``.
 
-Highlight groups used: ``pws``, ``pws_uv_gradient`` (gradient) or ``pws``.
+Highlight groups used: ``pws_stale`` (when data is stale),
+``pws_temp_gradient``, ``pws_uv_gradient``, ``pws_humidity_gradient``,
+``pws_wind_gradient`` (gradients) or ``pws``.
 """,
 )

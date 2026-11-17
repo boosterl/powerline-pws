@@ -26,25 +26,34 @@ paru -S python-powerline-pws
 
 # Configuration
 
-The PWS segment is currently only compatible with the [Cumulus Realtime Format](https://www.cumuluswiki.org/a/Realtime.txt)
-format. When your station is using [WeeWX](https://weewx.com/) for example,
-[this](https://github.com/matthewwall/weewx-crt/) excellent extension can be
-used for outputting weather data in the CRT-format.
+# Configuration
 
-The segment also uses some extra highlight groups. These highlight groups can be
-easily defined in for example `.config/powerline/colorschemes/default.json`:
+The PWS segment is currently only compatible with the [Cumulus Realtime Format](https://www.cumuluswiki.org/a/Realtime.txt)
+(`station_type: "cumulus"`, the default). When your station is using
+[WeeWX](https://weewx.com/) for example,
+[this](https://github.com/matthewwall/weewx-crt/) excellent extension can be
+used for outputting weather data in the CRT-format. Other formats can be added
+by registering a parser in `powerline_pws/parsers.py`.
+
+The segment uses some extra highlight groups, defined for example in
+`.config/powerline/colorschemes/default.json` (see
+[examples/colorschemes-default.json](examples/colorschemes-default.json)):
 ```
 {
     "groups": {
         "pws":                    { "fg": "gray8", "bg": "gray0", "attrs": [] },
+        "pws_stale":              { "fg": "gray5", "bg": "gray0", "attrs": ["dim"] },
         "pws_uv_gradient":        { "fg": "green_yellow_orange_red", "bg": "gray0", "attrs": [] },
-        "pws_temp_gradient":      { "fg": "blue_red", "bg": "gray0", "attrs": [] }
+        "pws_temp_gradient":      { "fg": "blue_red", "bg": "gray0", "attrs": [] },
+        "pws_humidity_gradient":  { "fg": "white_red", "bg": "gray0", "attrs": [] },
+        "pws_wind_gradient":      { "fg": "green_yellow_red", "bg": "gray0", "attrs": [] }
     }
 }
 ```
+Only `pws` is required; gradient groups that are not defined fall back to it.
 
-After this you can activate the segment by adding it to your segment
-configuration, for example in `.config/powerline/themes/tmux/default.json`:
+Activate the segment in your theme, for example in
+`.config/powerline/themes/tmux/default.json`:
 ```
 {
     "function": "powerline_pws.pws",
@@ -53,10 +62,44 @@ configuration, for example in `.config/powerline/themes/tmux/default.json`:
     }
 }
 ```
+`pws_url` can be an `http(s)` URL, a `file://` URL or a local path. By default
+only the outdoor temperature is shown.
 
-The minimum configuration needs a url to your PWS. This will only show the
-outdoor temperature. You can define which measurements to show using the
-`parameters`-parameter:
+## Arguments
+
+| Argument | Default | Description |
+|---|---|---|
+| `pws_url` | | Location of the station data |
+| `station_type` | `"cumulus"` | Format of the station data |
+| `parameters` | `["outTemp"]` | Measurements to show, space separated |
+| `format` | | Format string, e.g. `"{outTemp:.0f} {outHumidity}"`. Overrides `parameters` |
+| `label` | | Text shown before the measurements |
+| `unit_system` | `"metric"` | `"metric"` or `"imperial"` |
+| `source_unit_system` | `"metric"` | Unit system the station reports in |
+| `show_units` | `true` | Append units to values |
+| `icons` | `{}` | Symbol before a measurement, e.g. `{"outTemp": "🌡 "}` |
+| `gradients` | | Per measurement `[min, max]` (metric) or `{"min", "max", "group"}`; `null` disables |
+| `temp_coldest` / `temp_hottest` | `-30` / `40` | Bounds (°C) of the temperature gradient |
+| `stale_after` | `900` | Seconds before data is considered stale (`0` disables) |
+| `hide_stale` | `false` | Hide the segment when stale instead of using `pws_stale` |
+| `date_format` | `"%d/%m/%y"` | `strptime` format of the station date |
+| `interval` | `150` | Seconds between updates |
+| `temp_unit`, `pressure_unit`, `speed_unit`, `rain_unit`, `rain_rate_unit`, `radiation_unit` | | Override the unit label |
+
+Staleness uses the date/time in the station data, read as local time of the
+machine running Powerline.
+
+Available measurements: `outTemp`, `outHumidity`, `dewpoint`, `windSpeed_avg`,
+`windSpeed`, `rainRate`, `dayRain`, `barometer`, `windDir_compass`,
+`pressure_trend`, `rain_month`, `rain_year`, `rain_yesterday`, `inTemp`,
+`inHumidity`, `windchill`, `temperature_trend`, `outTemp_max`, `outTemp_min`,
+`windSpeed_max`, `windGust_max`, `pressure_max`, `pressure_min`,
+`10_min_high_gust`, `heatindex`, `humidex`, `UV`, `radiation`,
+`10min_avg_wind_bearing`, `rain_hour`.
+
+## Examples
+
+Choose measurements:
 ```
 {
     "function": "powerline_pws.pws",
@@ -67,9 +110,19 @@ outdoor temperature. You can define which measurements to show using the
 }
 ```
 
-In this example, the segment is configured two times to show different data from
-different weather stations. A label is added to every station to be able to
-distinguish the data:
+Imperial units with a custom format:
+```
+{
+    "function": "powerline_pws.pws",
+    "args": {
+      "pws_url": "/var/www/realtime.txt",
+      "unit_system": "imperial",
+      "format": "{outTemp:.0f} / {windSpeed:.0f}"
+    }
+}
+```
+
+Two stations, each with a label:
 ```
 {
 	"function": "powerline_pws.pws",
@@ -87,4 +140,12 @@ distinguish the data:
 	  "parameters": ["inTemp", "outTemp", "barometer", "outHumidity"]
 	}
 }
+```
+
+# Development
+
+```
+pip install -e ".[test]"
+ruff check .
+pytest
 ```
