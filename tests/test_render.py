@@ -62,9 +62,15 @@ def test_imperial_display():
 
 
 def test_gradient_uses_metric_value_for_imperial_source():
-    (seg,) = build_segments(state(outTemp=104.0), source_unit_system="imperial", now=NOW)
+    (seg,) = build_segments(state(outTemp=104.0), source_unit_system="imperial", unit_system="imperial", now=NOW)
     assert seg["gradient_level"] == pytest.approx(100)
     assert seg["contents"] == "104.0°F"
+
+
+def test_imperial_source_is_converted_for_metric_display():
+    (seg,) = build_segments(state(outTemp=104.0), source_unit_system="imperial", now=NOW)
+    assert seg["gradient_level"] == pytest.approx(100)
+    assert seg["contents"] == "40.0°C"
 
 
 def test_unit_override_and_hide_units():
