@@ -29,7 +29,7 @@ def cache_dir() -> str:
 
 
 def cache_path(url: str, station_type: str, directory: str | None = None) -> str:
-    digest = hashlib.sha1(f"{station_type}\0{url}".encode("utf-8")).hexdigest()
+    digest = hashlib.sha1(f"{station_type}\0{url}".encode()).hexdigest()
     return os.path.join(directory or cache_dir(), f"{digest}.json")
 
 
