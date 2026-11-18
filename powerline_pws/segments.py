@@ -1,15 +1,13 @@
-import os
 from collections import namedtuple
-from urllib.parse import unquote, urlparse
 
 from powerline.lib.threaded import KwThreadedSegment
-from powerline.lib.url import urllib_read
 from powerline.segments import with_docstring
 
-from .parsers import DEFAULT_DATE_FORMAT, PARSERS, ParseError
+from .parsers import DEFAULT_DATE_FORMAT, PARSERS
 from .render import build_segments
+from .source import DEFAULT_RETRY_INTERVAL, DEFAULT_TIMEOUT, fetch_state
 
-_PWSKey = namedtuple("Key", "pws_url station_type date_format")
+_PWSKey = namedtuple("Key", "pws_url station_type date_format timeout cache silent")
 
 # Legacy per-category unit label arguments.
 _UNIT_ARGS = {
@@ -27,28 +25,21 @@ _RENDER_ARGS = (
 )  # fmt: skip
 
 
-def read_source(url):
-    """Read the station data from an http(s) url, ``file://`` url or local path."""
-    parsed = urlparse(url)
-    if parsed.scheme in ("http", "https"):
-        return urllib_read(url)
-    if parsed.scheme == "file":
-        path = unquote(parsed.path)
-    elif parsed.scheme == "":
-        path = os.path.expanduser(url)
-    else:
-        raise ValueError(f"unsupported url scheme: {parsed.scheme!r}")
-    with open(path, encoding="utf-8") as handle:
-        return handle.read()
-
-
 class PWSSegment(KwThreadedSegment):
     # Can be overridden per segment with the ``interval`` argument.
     interval = 150
 
     @staticmethod
-    def key(pws_url="", station_type="cumulus", date_format=DEFAULT_DATE_FORMAT, **kwargs):
-        return _PWSKey(pws_url, station_type, date_format)
+    def key(
+        pws_url="",
+        station_type="cumulus",
+        date_format=DEFAULT_DATE_FORMAT,
+        timeout=DEFAULT_TIMEOUT,
+        cache=True,
+        silent=True,
+        **kwargs,
+    ):
+        return _PWSKey(pws_url, station_type, date_format, timeout, cache, silent)
 
     def compute_state(self, key):
         if not key.pws_url:
@@ -57,19 +48,20 @@ class PWSSegment(KwThreadedSegment):
         if parser is None:
             self.error("Unknown station_type {0!r}, expected one of {1}", key.station_type, sorted(PARSERS))
             return None
-        try:
-            raw_response = read_source(key.pws_url)
-        except (OSError, ValueError) as e:
-            self.error("Failed to read {0}: {1}", key.pws_url, e)
-            return None
-        if not raw_response:
-            self.error("Failed to get response")
-            return None
-        try:
-            return parser(raw_response, key.date_format)
-        except ParseError as e:
-            self.error("PWS returned malformed or unexpected response ({0}): {1}", e, repr(raw_response))
-            return None
+        result = fetch_state(
+            key.pws_url,
+            key.station_type,
+            parser,
+            key.date_format,
+            timeout=key.timeout,
+            interval=self.interval,
+            retry_interval=DEFAULT_RETRY_INTERVAL,
+            use_cache=key.cache,
+        )
+        if result.error:
+            # Network trouble is expected on a laptop; keep it quiet unless asked.
+            (self.debug if key.silent else self.error)(result.error)
+        return result.state
 
     def render_one(self, state, **kwargs):
         options = {name: kwargs[name] for name in _RENDER_ARGS if name in kwargs}
@@ -120,6 +112,14 @@ pws = with_docstring(
     ``strptime`` date format of the station date (default ``%d/%m/%y``)
 :param int interval:
     Seconds between updates (default 150)
+:param float timeout:
+    Seconds to wait for the station before giving up (default 3)
+:param bool cache:
+    Keep the last data in ``$XDG_CACHE_HOME/powerline-pws`` so that short-lived
+    Powerline processes (no ``powerline-daemon``) do not fetch on every refresh,
+    and can show the last known data while offline (default ``true``)
+:param bool silent:
+    Log fetch failures at debug level instead of error level (default ``true``)
 :param str temp_unit:
     Override the temperature unit label (also ``pressure_unit``, ``speed_unit``,
     ``rain_unit``, ``rain_rate_unit`` and ``radiation_unit``)
