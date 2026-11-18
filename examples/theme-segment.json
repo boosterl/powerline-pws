@@ -1,0 +1,10 @@
+{
+    "function": "powerline_pws.pws",
+    "args": {
+        "pws_url": "http://example.com/realtime.txt",
+        "format": "{outTemp:.0f} {outHumidity:.0f} {UV}",
+        "unit_system": "metric",
+        "stale_after": 900,
+        "icons": { "outTemp": "🌡 ", "UV": "☀ " }
+    }
+}

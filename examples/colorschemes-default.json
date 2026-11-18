@@ -1,0 +1,10 @@
+{
+    "groups": {
+        "pws":                   { "fg": "gray8", "bg": "gray0", "attrs": [] },
+        "pws_stale":             { "fg": "gray5", "bg": "gray0", "attrs": ["dim"] },
+        "pws_temp_gradient":     { "fg": "blue_red", "bg": "gray0", "attrs": [] },
+        "pws_uv_gradient":       { "fg": "green_yellow_orange_red", "bg": "gray0", "attrs": [] },
+        "pws_humidity_gradient": { "fg": "white_red", "bg": "gray0", "attrs": [] },
+        "pws_wind_gradient":     { "fg": "green_yellow_red", "bg": "gray0", "attrs": [] }
+    }
+}

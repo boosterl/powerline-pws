@@ -6,24 +6,38 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "powerline-pws"
-description = "A Powerline segment for showing the PWS station data" 
-version = "1.1.1"
+description = "A Powerline segment for showing the PWS station data"
+version = "1.2.0"
 readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["powerline-status"]
 authors = [{ name = "Bram Oosterlynck", email = "bram.oosterlynck@gmail.com" }]
 license = { file = "LICENSE" }
 classifiers  = [
   "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
 ]
-keywords = ["powerline weather-station weewx pws personal-weather-station powerline-segment"]
+keywords = ["powerline", "weather-station", "weewx", "pws", "personal-weather-station", "powerline-segment"]
+
+[project.optional-dependencies]
+test = ["pytest", "ruff"]
 
 [project.urls]
 Homepage = "https://github.com/boosterl/powerline-pws"
 Repository = "https://github.com/boosterl/powerline-pws.git"
-Issues = "https://github.com/boosterl/powerline-pws"
+Issues = "https://github.com/boosterl/powerline-pws/issues"
+
+[tool.setuptools]
+packages = ["powerline_pws"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
