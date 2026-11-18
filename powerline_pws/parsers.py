@@ -5,9 +5,10 @@ types can be supported by adding a parser to ``PARSERS``.
 """
 import re
 import time
-from typing import Callable, Dict, NamedTuple, Optional, Union
+from collections.abc import Callable
+from typing import NamedTuple
 
-Value = Union[float, str]
+Value = float | str
 
 
 class ParseError(Exception):
@@ -15,13 +16,13 @@ class ParseError(Exception):
 
 
 class StationState(NamedTuple):
-    measurements: Dict[str, Value]
+    measurements: dict[str, Value]
     #: Seconds since the epoch (station time read as local time), if known.
-    timestamp: Optional[float]
+    timestamp: float | None
 
 
 # Measurement name -> column in the Cumulus realtime.txt file.
-CUMULUS_FIELDS: Dict[str, int] = {
+CUMULUS_FIELDS: dict[str, int] = {
     "outTemp": 2,
     "outHumidity": 3,
     "dewpoint": 4,
@@ -64,7 +65,7 @@ def _to_value(text: str) -> Value:
         return text
 
 
-def parse_timestamp(date: str, clock: str, date_format: str = DEFAULT_DATE_FORMAT) -> Optional[float]:
+def parse_timestamp(date: str, clock: str, date_format: str = DEFAULT_DATE_FORMAT) -> float | None:
     """Parse the station date and time, returning ``None`` when unparsable.
 
     Cumulus lets users pick the date separator, so any of ``. / -`` is accepted.
@@ -87,6 +88,6 @@ def parse_cumulus(raw: str, date_format: str = DEFAULT_DATE_FORMAT) -> StationSt
     return StationState(measurements, parse_timestamp(parts[0], parts[1], date_format))
 
 
-PARSERS: Dict[str, Callable[[str, str], StationState]] = {
+PARSERS: dict[str, Callable[[str, str], StationState]] = {
     "cumulus": parse_cumulus,
 }

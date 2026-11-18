@@ -4,10 +4,11 @@ This module has no dependency on Powerline itself so it is easy to test.
 """
 import string
 import time
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from collections.abc import Mapping
+from typing import Any
 
 from .parsers import StationState, Value
-from .units import IMPERIAL, METRIC, PARAMETER_CATEGORY, UNIT_LABELS, UNIT_SYSTEMS, convert
+from .units import METRIC, PARAMETER_CATEGORY, UNIT_LABELS, UNIT_SYSTEMS, convert
 
 DIVIDER_GROUP = "background:divider"
 UV_MAX = 11
@@ -17,7 +18,7 @@ UV_MAX = 11
 _TEMP = ("pws_temp_gradient", -30.0, 40.0)
 _HUMIDITY = ("pws_humidity_gradient", 0.0, 100.0)
 _WIND = ("pws_wind_gradient", 0.0, 80.0)
-DEFAULT_GRADIENTS: Dict[str, Tuple[str, float, float]] = {
+DEFAULT_GRADIENTS: dict[str, tuple[str, float, float]] = {
     "inTemp": _TEMP,
     "outTemp": _TEMP,
     "UV": ("pws_uv_gradient", 0.0, float(UV_MAX)),
@@ -39,8 +40,8 @@ def gradient_level(value: float, minimum: float, maximum: float) -> float:
 
 
 def _resolve_gradients(
-    overrides: Optional[Mapping[str, Any]], temp_coldest: float, temp_hottest: float
-) -> Dict[str, Tuple[str, float, float]]:
+    overrides: Mapping[str, Any] | None, temp_coldest: float, temp_hottest: float
+) -> dict[str, tuple[str, float, float]]:
     gradients = dict(DEFAULT_GRADIENTS)
     for name in ("inTemp", "outTemp"):
         gradients[name] = (_TEMP[0], temp_coldest, temp_hottest)
@@ -70,29 +71,29 @@ def format_value(value: Value, spec: str = "") -> str:
         return str(value)
 
 
-def is_stale(state: StationState, stale_after: float, now: Optional[float] = None) -> bool:
+def is_stale(state: StationState, stale_after: float, now: float | None = None) -> bool:
     if not stale_after or state.timestamp is None:
         return False
     return (time.time() if now is None else now) - state.timestamp > stale_after
 
 
 def build_segments(
-    state: Optional[StationState],
-    parameters: Optional[List[str]] = None,
-    label: Optional[str] = None,
-    format: Optional[str] = None,
+    state: StationState | None,
+    parameters: list[str] | None = None,
+    label: str | None = None,
+    format: str | None = None,
     unit_system: str = METRIC,
     source_unit_system: str = METRIC,
     show_units: bool = True,
-    unit_overrides: Optional[Mapping[str, str]] = None,
-    icons: Optional[Mapping[str, str]] = None,
-    gradients: Optional[Mapping[str, Any]] = None,
+    unit_overrides: Mapping[str, str] | None = None,
+    icons: Mapping[str, str] | None = None,
+    gradients: Mapping[str, Any] | None = None,
     temp_coldest: float = -30,
     temp_hottest: float = 40,
     stale_after: float = 900,
     hide_stale: bool = False,
-    now: Optional[float] = None,
-) -> Optional[List[Dict[str, Any]]]:
+    now: float | None = None,
+) -> list[dict[str, Any]] | None:
     """Build the Powerline segments, or ``None`` when nothing should be shown.
 
     Raises ``ValueError`` for an invalid ``format`` or unit system.
@@ -106,18 +107,18 @@ def build_segments(
         return None
 
     if not format:
-        format = " ".join("{%s}" % p for p in (parameters or ["outTemp"]))
+        format = " ".join(f"{{{p}}}" for p in (parameters or ["outTemp"]))
     labels = dict(UNIT_LABELS[unit_system])
     labels.update({k: v for k, v in (unit_overrides or {}).items() if v})
     icons = icons or {}
     gradient_specs = _resolve_gradients(gradients, temp_coldest, temp_hottest)
 
-    segments: List[Dict[str, Any]] = []
+    segments: list[dict[str, Any]] = []
 
-    def add(contents: str, groups: List[str], level: Optional[float] = None) -> None:
+    def add(contents: str, groups: list[str], level: float | None = None) -> None:
         if stale:
             groups = ["pws_stale"] + groups
-        segment: Dict[str, Any] = {
+        segment: dict[str, Any] = {
             "contents": contents,
             "highlight_groups": groups,
             "divider_highlight_group": DIVIDER_GROUP,

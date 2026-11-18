@@ -3,13 +3,13 @@
 All internal computation (gradients, conversions) goes through metric units:
 degC, km/h, hPa, mm, mm/h and W/m2.
 """
-from typing import Callable, Dict, Optional, Tuple
+from collections.abc import Callable
 
 METRIC = "metric"
 IMPERIAL = "imperial"
 UNIT_SYSTEMS = (METRIC, IMPERIAL)
 
-UNIT_LABELS: Dict[str, Dict[str, str]] = {
+UNIT_LABELS: dict[str, dict[str, str]] = {
     METRIC: {
         "temperature": "°C",
         "speed": "km/h",
@@ -33,7 +33,7 @@ UNIT_LABELS: Dict[str, Dict[str, str]] = {
 }
 
 # category -> (imperial -> metric, metric -> imperial)
-_CONVERSIONS: Dict[str, Tuple[Callable[[float], float], Callable[[float], float]]] = {
+_CONVERSIONS: dict[str, tuple[Callable[[float], float], Callable[[float], float]]] = {
     "temperature": (lambda f: (f - 32) * 5 / 9, lambda c: c * 9 / 5 + 32),
     "speed": (lambda mph: mph * 1.609344, lambda kmh: kmh / 1.609344),
     "pressure": (lambda inhg: inhg * 33.8638866667, lambda hpa: hpa / 33.8638866667),
@@ -42,7 +42,7 @@ _CONVERSIONS: Dict[str, Tuple[Callable[[float], float], Callable[[float], float]
 }
 
 # measurement name -> unit category
-PARAMETER_CATEGORY: Dict[str, str] = {
+PARAMETER_CATEGORY: dict[str, str] = {
     "outTemp": "temperature",
     "outHumidity": "relative",
     "dewpoint": "temperature",
@@ -73,7 +73,7 @@ PARAMETER_CATEGORY: Dict[str, str] = {
 }
 
 
-def convert(value: float, category: Optional[str], source: str, target: str) -> float:
+def convert(value: float, category: str | None, source: str, target: str) -> float:
     """Convert ``value`` of ``category`` between unit systems."""
     if source == target or category not in _CONVERSIONS:
         return value
