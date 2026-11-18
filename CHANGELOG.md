@@ -10,4 +10,7 @@
 - Add staleness detection (`stale_after`, `hide_stale`, `pws_stale` group).
 - Add `station_type` and `date_format`; `interval` is configurable per segment.
 - Skip missing measurements instead of showing a lone unit.
+- Add a 3s fetch `timeout`, an on-disk cache and fallback to the last known
+  data, so a slow or absent network does not stall the status line.
+- Fetch failures are logged at debug level unless `silent` is `false`.
 - Add tests, CI and type hints.

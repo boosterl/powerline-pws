@@ -84,6 +84,9 @@ only the outdoor temperature is shown.
 | `hide_stale` | `false` | Hide the segment when stale instead of using `pws_stale` |
 | `date_format` | `"%d/%m/%y"` | `strptime` format of the station date |
 | `interval` | `150` | Seconds between updates |
+| `timeout` | `3` | Seconds to wait for the station |
+| `cache` | `true` | Keep the last data on disk (see below) |
+| `silent` | `true` | Log fetch failures at debug instead of error level |
 | `temp_unit`, `pressure_unit`, `speed_unit`, `rain_unit`, `rain_rate_unit`, `radiation_unit` | | Override the unit label |
 
 Staleness uses the date/time in the station data, read as local time of the
@@ -149,3 +152,20 @@ pip install -e ".[test]"
 ruff check .
 pytest
 ```
+
+## Slow or missing network
+
+Fetching has a short `timeout` (3 seconds). The last data is cached in
+`$XDG_CACHE_HOME/powerline-pws/` (default `~/.cache/powerline-pws/`), so:
+
+- when Powerline runs without `powerline-daemon` (a new process per refresh),
+  the network is only used once per `interval`, and after a failure not again
+  for 60 seconds, instead of on every refresh;
+- while offline the last known data stays visible, highlighted with
+  `pws_stale` once older than `stale_after`.
+
+If tmux shows `<'... powerline ...' not ready>`, the render command is taking
+too long: that's tmux's placeholder for a `#(...)` command that has not
+produced output yet. Starting `powerline-daemon` also avoids it.
+Set `"cache": false` to disable the disk cache, `"silent": false` to log fetch
+failures as errors.
